@@ -1,8 +1,8 @@
 function run_tests
 
 % Note, if you run "compile_mex_isosplit5" from the matlab/ directory then
-% you can run the pure C++ version via isosplit5_mex. The above version is
-% matlab, but uses C++ for the low-level jisotonic5 call.
+% you can run the pure C++ version via isosplit5_mex. The below version is
+% primarily matlab, but uses C++ for the low-level jisotonic5 call.
 
 % add the necessary paths
 path0=fileparts(mfilename('fullpath')); %directory of this script
