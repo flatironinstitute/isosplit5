@@ -45,7 +45,7 @@ n = 1e4;                                             % points per cluster
 K = 10;                                              % number of clusters
 rng(1);                                              % fix the seed
 X = randn(d,K*n) + 2.0*kron(randn(d,K),ones(1,n));   % N=K*n points in d dims
-L = isosplit5_mex(X);                                % cluster: takes 1.6 sec
+L = isosplit5_mex(X);                                % cluster: takes 2 sec
 k = mode(reshape(L,[n,K]),1);                        % get gross labeling
 fprintf('gross label errors: %d\n',sum(sort(k)-(1:K)))
 fprintf('number of points misclassified: %d\n',sum(L~=kron(k,ones(1,n))))
@@ -58,9 +58,13 @@ conclude that the number of clusters was correctly found, and that
 
 ### Further usage and tests
 
-This repo also contains a hybrid MATLAB/C++ implementation,
-which uses C++/MEX for the isocut (and jisotonic) stages.
-For this, do `compile_mex_isocut5`.
+This repo also contains a hybrid MATLAB/C++ implementation (`isosplit5`)
+which still uses C++/MEX for the isocut (and jisotonic) stages.
+The interface allows control of various algorithm parameters
+(see `help isosplit5`).
+This code is about 10x slower than the pure C++ version (`isosplit5_mex`),
+on an i7 laptop.
+To use this, do `compile_mex_isocut5`.
 Then, running `isosplit5` with no arguments does a simple
 2D self-test of both the hybrid and the pure C++ versions, and produces
 the above picture.
