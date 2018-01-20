@@ -1,5 +1,5 @@
 function [labels,info]=isosplit5(X,opts)
-% isosplit5 - perform clustering using isotonic regression (jfm, may 2015 - dec 2016)
+% isosplit5 - perform clustering via isotonic regression, MATLAB hybrid version
 %
 % labels = isosplit5(X,opts) 
 %   X is M x N, M=#dimensions, N=#samples
@@ -15,6 +15,12 @@ function [labels,info]=isosplit5(X,opts)
 %   opts.verbose_pause_duration
 %   opts.whiten_cluster_pairs -- whether to whiten at each comparison
 %   opts.initial_labels -- optional -- if provided will skip the parcelation step
+%
+% Without arguments, a self-test, and test of isosplit5_mex, is done.
+%
+% Note: isocut5_mex must be in your path.
+%
+% See also: ISOSPLIT5_MEX which is faster.
 %
 % Magland 5/19/2015, updated dec 2016
 
@@ -132,7 +138,7 @@ while 1 % Passes
             if (length(unique(data.labels))<=10)
                 ooo.draw_legend=true;
             end;
-            figure(fA); ms_view_clusters_0(X(:,:),data.labels,ooo);
+            figure(fA); view_clusters(X(:,:),data.labels,ooo);
             %title(sprintf('iteration %d',iteration_number));
             set(gca,'xtick',[]); set(gca,'ytick',[]);
             pause(opts.verbose_pause_duration);
@@ -489,17 +495,20 @@ end;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function test_isosplit5
+path0=fileparts(mfilename('fullpath')); %directory of this script
+addpath([path0,'/visualization']); % provides view_clusters()
+
 rng(104);
 close all;
 
 [X,true_labels]=generate_dataset;
-figure; ms_view_clusters_0(X(1:2,:),true_labels);
+figure; view_clusters(X(1:2,:),true_labels);
 title('Truth');
 
 ttt=tic;
-[labels2,info]=isosplit5(X,struct('verbose',1,'refine_clusters',0,'whiten_cluster_pairs',1));
+[labels2,info]=isosplit5(X,struct('verbose',0,'refine_clusters',0,'whiten_cluster_pairs',1));
 fprintf('Time for isosplit5: %g\n',toc(ttt));
-figure; ms_view_clusters_0(X(1:2,:),labels2);
+figure; view_clusters(X(1:2,:),labels2);
 title('isosplit5');
 disp(info.timers);
 
@@ -513,5 +522,5 @@ disp(info.timers);
 ttt=tic;
 labels_mex=isosplit5_mex(X);
 fprintf('Time for isosplit5_mex: %g\n',toc(ttt));
-figure; ms_view_clusters_0(X(1:2,:),labels_mex);
+figure; view_clusters(X(1:2,:),labels_mex);
 title('isosplit5 mex');
