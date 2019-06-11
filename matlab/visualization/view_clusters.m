@@ -84,7 +84,7 @@ elseif M==3
   %%% Oh boy, why do we need to reverse this?
   hh=hh(end:-1:1);
   if (opts.draw_legend)
-    [~,~] = legend(hh,num2cellstr(1:K));
+    [~,~] = legend(hh,num2str(1:K));
   end;
   %xlabel('z_1'); ylabel('z_2'); zlabel('z_3');
   axis equal vis3d;       % for good aspect ratio and rotation
