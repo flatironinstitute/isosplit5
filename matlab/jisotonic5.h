@@ -18,6 +18,7 @@
 #define jisotonic5_h
 
 #include <stdlib.h>
+#include <cstdint>
 
 typedef int64_t bigint;
 

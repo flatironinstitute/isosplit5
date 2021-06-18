@@ -173,7 +173,9 @@ bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_
     bigint split_factor = 3; // split factor around 2.71 is in a sense ideal
 
     double target_radius;
-    while ((bigint)parcels.size() < target_num_parcels) {
+    bool something_changed=true;
+    while (((bigint)parcels.size() < target_num_parcels)&&(something_changed)) {
+        bool something_changed=false;
         bool candidate_found = false;
         for (bigint i = 0; i < (bigint)parcels.size(); i++) {
             std::vector<bigint>* indices = &parcels[i].indices;
@@ -248,6 +250,8 @@ bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_
                     if (PP.indices.size() > 0)
                         parcels.push_back(PP);
                     else {
+                        printf("Warning in isosplit5: new parcel has no points -- perhaps dataset contains duplicate points? -- original size = %ld.\n", sz);
+                        /*
                         for (int aa=0; aa<split_factor; aa++) {
                             printf("DEBUG: iii[%d]=%ld: ",aa,iii[aa]);
                             for (int mm=0; mm<M; mm++) {
@@ -257,11 +261,15 @@ bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_
                         }
                         printf("Unexpected problem. New parcel has no points -- perhaps dataset contains duplicate points? -- original size = %ld.\n", sz);
                         return false;
+                        */
                     }
                 }
                 if ((bigint)parcels[p_index].indices.size() == sz) {
                     printf("Warning: Size did not change after splitting parcel.\n");
                     p_index++;
+                }
+                else {
+                    something_changed=true;
                 }
             }
             else {
@@ -281,15 +289,19 @@ bool parcelate2(int* labels, bigint M, bigint N, float* X, bigint target_parcel_
 
 bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
 {
-
     // compute the initial clusters
     bigint target_parcel_size = opts.min_cluster_size;
     bigint target_num_parcels = opts.K_init;
     // !! important not to do a final reassign because then the shapes will not be conducive to isosplit iterations -- hexagons are not good for isosplit!
     parcelate2_opts p2opts;
     p2opts.final_reassign = false;
-    if (!parcelate2(labels, M, N, X, target_parcel_size, target_num_parcels, p2opts))
+    if (!parcelate2(labels, M, N, X, target_parcel_size, target_num_parcels, p2opts)) {
+        for (bigint i=0; i<N; i++) {
+            labels[i]=-1;
+        }
+        printf("Failure in parcelate2.\n");
         return false;
+    }
     int Kmax = ns_isosplit5::compute_max(N, labels);
 
     float* centroids = (float*)malloc(sizeof(float) * M * Kmax);
@@ -301,9 +313,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
     ns_isosplit5::compute_covmats(covmats, M, N, Kmax, X, labels, centroids, clusters_to_compute_vec);
 
     // The active labels are those that are still being used -- for now, everything is active
-    int active_labels_vec[Kmax];
-    for (bigint i = 0; i < Kmax; i++)
-        active_labels_vec[i] = 1;
+    std::vector<int> active_labels_vec(Kmax, 1);
     std::vector<int> active_labels;
     for (bigint i = 0; i < Kmax; i++)
         active_labels.push_back(i + 1);
@@ -423,9 +433,7 @@ bool isosplit5(int* labels, bigint M, bigint N, float* X, isosplit5_opts opts)
     }
 
     // We should remap the labels to occupy the first natural numbers
-    bigint labels_map[Kmax];
-    for (bigint i = 0; i < Kmax; i++)
-        labels_map[i] = 0;
+    std::vector<bigint> labels_map(Kmax, 0);
     for (bigint i = 0; i < (bigint)active_labels.size(); i++) {
         labels_map[active_labels[i] - 1] = i + 1;
     }
@@ -884,8 +892,9 @@ void get_pairs_to_compare(std::vector<bigint>* inds1, std::vector<bigint>* inds2
 {
     inds1->clear();
     inds2->clear();
-    double dists[K][K];
+    std::vector<std::vector<double>> dists(K);
     for (bigint k1 = 0; k1 < K; k1++) {
+        dists[k1].resize(K);
         for (bigint k2 = 0; k2 < K; k2++) {
             if ((active_comparisons_made[k1][k2]) || (k1 == k2))
                 dists[k1][k2] = -1;
@@ -1021,7 +1030,7 @@ bool merge_test(std::vector<bigint>* L12, bigint M, bigint N1, bigint N2, float*
     std::vector<float> inv_avg_covmat;
     inv_avg_covmat.resize(M * M);
     if (!matinv(M, inv_avg_covmat.data(), avg_covmat.data())) {
-        printf("Unable to invert matrix. This may be due to the fact that you have duplicate events. Contact Jeremy if this is not the case, or if you would prefer the program to continue in this case. Aborting.\n");
+        fprintf(stderr, "Unable to invert matrix. This may be due to the fact that you have duplicate events. Contact Jeremy if this is not the case, or if you would prefer the program to continue in this case. Aborting.\n");
         abort();
         return false;
     }
@@ -1175,11 +1184,10 @@ void compare_pairs(std::vector<bigint>* clusters_changed, bigint* total_num_labe
 
 void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, bigint M, bigint N, double* centroids)
 {
-    float distances[N][N];
-    bigint used[N];
-    for (bigint i = 0; i < N; i++)
-        used[i] = 0;
+    std::vector<bigint> used(N, 0);   
+    std::vector<std::vector<float>> distances(N);
     for (bigint i = 0; i < N; i++) {
+        distances[i].resize(N);
         for (bigint j = i; j < N; j++) {
             double sumsqr = 0;
             for (bigint m = 0; m < M; m++) {
@@ -1193,9 +1201,7 @@ void get_pairs_to_compare3(std::vector<bigint>* i1s, std::vector<bigint>* i2s, b
     bool something_changed = true;
     while (something_changed) {
         something_changed = false;
-        bigint closest[N];
-        for (bigint i = 0; i < N; i++)
-            closest[i] = -1;
+        std::vector<bigint> closest(N, -1);
         for (bigint i = 0; i < N; i++) {
             double best_distance = -1;
             if (!used[i]) {

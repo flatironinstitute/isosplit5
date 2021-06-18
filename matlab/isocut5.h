@@ -17,6 +17,7 @@
 #define ISOCUT5_H
 
 #include <stdlib.h>
+#include <cstdint>
 
 typedef int64_t bigint;
 
